@@ -96,7 +96,7 @@ def evaluate_model(X_train, y_train, X_test, y_test, models, param):
             y_test_pred = best_model.predict(X_test)
             test_model_score = r2_score(y_test, y_test_pred)
            
-            # Update models dictionary with best model
+            # Save the best model
             models[model_name] = best_model
            
             report[model_name] = test_model_score

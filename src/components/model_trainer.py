@@ -55,67 +55,67 @@ class ModelTrainer:
                 "KNeighborsRegressor": KNeighborsRegressor()
             }
 
-            # Optimized parameter grids - reduced search space for faster training
+            # Optimized parameter grids 
             param = {
-                "LinearRegression": {},  # No parameters to tune
+                "LinearRegression": {},  
                 
                 "DecisionTreeRegressor": {
-                    'max_depth': [5, 10, 20, None],  # Reduced from 6 to 4 options
-                    'min_samples_split': [2, 5, 10],  # Fixed values instead of randint
-                    'min_samples_leaf': [1, 2, 4],   # Fixed values instead of randint
-                    'max_features': ['sqrt', None]    # Reduced from 3 to 2 options
+                    'max_depth': [5, 10, 20, None],  
+                    'min_samples_split': [2, 5, 10],  
+                    'min_samples_leaf': [1, 2, 4],   
+                    'max_features': ['sqrt', None]    
                 },
                 
                 "RandomForestRegressor": {
-                    'n_estimators': [100, 200, 300],     # Fixed values instead of randint
-                    'max_depth': [10, 20, None],         # Reduced options
-                    'min_samples_split': [2, 5],         # Reduced options
-                    'min_samples_leaf': [1, 2],          # Reduced options
-                    'max_features': ['sqrt', None],      # Reduced options
-                    'bootstrap': [True]                   # Only use bootstrap=True for faster training
+                    'n_estimators': [100, 200, 300],     
+                    'max_depth': [10, 20, None],         
+                    'min_samples_split': [2, 5],         
+                    'min_samples_leaf': [1, 2],         
+                    'max_features': ['sqrt', None],     
+                    'bootstrap': [True]                  
                 },
                 
                 "GradientBoostingRegressor": {
-                    'n_estimators': [100, 200],          # Reduced options
-                    'learning_rate': [0.01, 0.1, 0.2],   # Fixed values instead of uniform
-                    'max_depth': [3, 6],                  # Reduced options
-                    'min_samples_split': [2, 10],        # Reduced options
-                    'subsample': [0.8, 1.0]              # Reduced options
+                    'n_estimators': [100, 200],          
+                    'learning_rate': [0.01, 0.1, 0.2],   
+                    'max_depth': [3, 6],                  
+                    'min_samples_split': [2, 10],        
+                    'subsample': [0.8, 1.0]              
                 },
                 
                 "HistGradientBoostingRegressor": {
-                    'learning_rate': [0.01, 0.1, 0.2],   # Fixed values
-                    'max_iter': [100, 200],              # Reduced options
-                    'max_depth': [3, 6],                 # Reduced options
-                    'min_samples_leaf': [1, 5],         # Reduced options
-                    'l2_regularization': [0, 0.1]       # Reduced options
+                    'learning_rate': [0.01, 0.1, 0.2],   
+                    'max_iter': [100, 200],              
+                    'max_depth': [3, 6],                 
+                    'min_samples_leaf': [1, 5],         
+                    'l2_regularization': [0, 0.1]      
                 },
                 
                 "XGBRegressor": {
-                    'n_estimators': [100, 200],          # Reduced options
-                    'learning_rate': [0.01, 0.1, 0.2],   # Fixed values
-                    'max_depth': [3, 6],                  # Reduced options
-                    'min_child_weight': [1, 3],          # Reduced options
-                    'subsample': [0.8, 1.0],            # Reduced options
-                    'colsample_bytree': [0.8, 1.0]      # Reduced options
+                    'n_estimators': [100, 200],          
+                    'learning_rate': [0.01, 0.1, 0.2],   
+                    'max_depth': [3, 6],                  
+                    'min_child_weight': [1, 3],          
+                    'subsample': [0.8, 1.0],            
+                    'colsample_bytree': [0.8, 1.0]      
                 },
                 
                 "CatBoostRegressor": {
-                    'iterations': [100, 200],            # Reduced options
-                    'learning_rate': [0.01, 0.1, 0.2],   # Fixed values
-                    'depth': [4, 6],                     # Reduced options
-                    'l2_leaf_reg': [1, 3]               # Reduced options
+                    'iterations': [100, 200],            
+                    'learning_rate': [0.01, 0.1, 0.2],   
+                    'depth': [4, 6],                     
+                    'l2_leaf_reg': [1, 3]               
                 },
                 
                 "SVR": {
-                    'C': [0.1, 1, 10],                  # Fixed values instead of uniform
-                    'epsilon': [0.01, 0.1],             # Reduced options
-                    'kernel': ['rbf', 'linear'],        # Only best performing kernels
-                    'gamma': ['scale', 'auto']           # Simplified gamma options
+                    'C': [0.1, 1, 10],                  
+                    'epsilon': [0.01, 0.1],             
+                    'kernel': ['rbf', 'linear'],        
+                    'gamma': ['scale', 'auto']           
                 },
                 
                 "KNeighborsRegressor": {
-                    'n_neighbors': [3, 5, 7, 10],       # Fixed values instead of randint
+                    'n_neighbors': [3, 5, 7, 10],       
                     'weights': ['uniform', 'distance'],
                     'p': [1, 2]
                 }
