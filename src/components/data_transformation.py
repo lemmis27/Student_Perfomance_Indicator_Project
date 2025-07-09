@@ -16,7 +16,7 @@ from src.utils import save_object
 
 @dataclass
 class DataTransformationConfig:
-    preprocessor_obj_file_path=os.path.join('artifacts',"proprocessor.pkl")
+    preprocessor_obj_file_path=os.path.join('artifacts',"preprocessor.pkl")
 
 class DataTransformation:
     def __init__(self):
@@ -24,8 +24,8 @@ class DataTransformation:
 
     def get_data_transformer_object(self):
         '''
-        This function si responsible for data trnasformation
-        
+        This function is responsible for data transformation
+
         '''
         try:
             numerical_columns = ["writing score", "reading score"]
@@ -49,7 +49,7 @@ class DataTransformation:
 
                 steps=[
                 ("imputer",SimpleImputer(strategy="most_frequent")),
-                ("one_hot_encoder",OneHotEncoder()),
+                ("one_hot_encoder",OneHotEncoder(handle_unknown="ignore")),
                 ("scaler",StandardScaler(with_mean=False))
                 ]
 
@@ -87,6 +87,7 @@ class DataTransformation:
 
             target_column_name="math score"
             numerical_columns = ["writing score", "reading score"]
+            
 
             input_feature_train_df=train_df.drop(columns=[target_column_name],axis=1)
             target_feature_train_df=train_df[target_column_name]
