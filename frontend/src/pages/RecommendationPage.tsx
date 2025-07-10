@@ -10,6 +10,11 @@ import Tooltip from '@mui/material/Tooltip';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PrintIcon from '@mui/icons-material/Print';
 import ShareIcon from '@mui/icons-material/Share';
+import CircularProgress from '@mui/material/CircularProgress';
+import SendIcon from '@mui/icons-material/Send';
+import PersonIcon from '@mui/icons-material/Person';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import { useRef } from 'react';
 
 const getRecommendation = (score: number | null) => {
   if (score === null) return "No prediction yet. Please use the predictor first!";
@@ -72,29 +77,81 @@ const RecommendationPage = ({ score, history }: RecommendationPageProps) => {
   const [animatedValue, setAnimatedValue] = useState(0);
   const [animatedColor, setAnimatedColor] = useState(theme.palette.text.secondary);
   const navigate = useNavigate();
+  const [aiRecommendation, setAIRecommendation] = useState<string>("");
+  const [aiLoading, setAILoading] = useState(false);
+  const [aiError, setAIError] = useState("");
+  const [chatHistory, setChatHistory] = useState<{role: string, content: string, time: string}[]>(() => {
+    const stored = localStorage.getItem('chatHistory');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const chatBoxRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (chatBoxRef.current) {
+      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  // Persist chat history to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+  }, [chatHistory]);
 
   useEffect(() => {
-    if (score === null) {
-      setAnimatedValue(0);
-      setAnimatedColor(theme.palette.text.secondary);
-      return;
+    if (history && history.length > 0) {
+      setAILoading(true);
+      setAIError("");
+      fetch('http://localhost:8000/recommend/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: history.map(h => ({ result: h.result })) }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          setAIRecommendation(data.recommendation);
+          setAILoading(false);
+        })
+        .catch(() => {
+          setAIError("Could not fetch AI recommendation.");
+          setAILoading(false);
+        });
+    } else {
+      setAIRecommendation("");
     }
-    let start = 0;
-    const step = () => {
-      if (start < score) {
-        start += Math.max(1, Math.round(score / 30));
-        if (start > score) start = score;
-        setAnimatedValue(start);
-        setAnimatedColor(getScoreColor(start));
-        requestAnimationFrame(step);
-      } else {
-        setAnimatedValue(score);
-        setAnimatedColor(getScoreColor(score));
-      }
-    };
-    step();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [score]);
+  }, [history]);
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim()) return;
+    setChatLoading(true);
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setChatHistory(prev => [...prev, {role: 'user', content: chatInput, time: now}]);
+    try {
+      const res = await fetch('http://localhost:8000/recommend/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          history: (history || []).map(h => ({ result: h.result })),
+          question: chatInput
+        })
+      });
+      const data = await res.json();
+      const aiNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setChatHistory(prev => [...prev, {role: 'ai', content: data.answer, time: aiNow}]);
+    } catch {
+      const aiNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setChatHistory(prev => [...prev, {role: 'ai', content: 'Sorry, I could not get a response.', time: aiNow}]);
+    }
+    setChatInput('');
+    setChatLoading(false);
+    setTimeout(() => {
+      chatInputRef.current?.focus();
+    }, 0);
+  };
 
   const recommendationText = score !== null ? getRecommendation(score) : '';
   const handleCopy = () => {
@@ -196,6 +253,109 @@ const RecommendationPage = ({ score, history }: RecommendationPageProps) => {
             >
               Share
             </Button>
+          </Box>
+        )}
+        {/* AI Recommendation Section */}
+        {history && history.length > 0 && (
+          <Box sx={{ mt: 4, mb: 2 }}>
+            <Typography variant="h6" color="primary" gutterBottom>
+              AI Recommendation
+            </Typography>
+            {aiLoading ? (
+              <CircularProgress size={24} />
+            ) : aiError ? (
+              <Typography color="error">{aiError}</Typography>
+            ) : (
+              <Typography variant="body1" color="text.secondary">{aiRecommendation}</Typography>
+            )}
+          </Box>
+        )}
+        {/* AI Chat Section */}
+        {history && history.length > 0 && (
+          <Box sx={{ mt: 4, mb: 2 }}>
+            <Typography variant="h6" color="primary" gutterBottom>
+              Ask the AI for personalized advice
+            </Typography>
+            <Box ref={chatBoxRef} sx={{ maxHeight: 200, overflowY: 'auto', mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2 }}>
+              {chatHistory.map((msg, idx) => (
+                <React.Fragment key={idx}>
+                  <Box
+                    sx={{
+                      mb: 1,
+                      display: 'flex',
+                      flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                      alignItems: 'flex-end',
+                      gap: 1,
+                    }}
+                    aria-label={msg.role === 'user' ? 'User message' : 'AI message'}
+                  >
+                    {msg.role === 'user' ? <PersonIcon color="primary" /> : <SmartToyIcon color="secondary" />}
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          display: 'inline-block',
+                          bgcolor: msg.role === 'user'
+                            ? theme.palette.primary.main
+                            : theme.palette.mode === 'dark'
+                              ? theme.palette.background.paper
+                              : 'grey.100',
+                          color: msg.role === 'user'
+                            ? theme.palette.primary.contrastText
+                            : theme.palette.text.primary,
+                          px: 2,
+                          py: 1,
+                          borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                          boxShadow: 1,
+                          maxWidth: { xs: '80vw', sm: 400 },
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {msg.content}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {msg.time}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </React.Fragment>
+              ))}
+              {chatLoading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <SmartToyIcon color="secondary" />
+                  <Box sx={{ bgcolor: 'grey.100', px: 2, py: 1, borderRadius: '4px 16px 16px 16px', boxShadow: 1, fontStyle: 'italic', color: 'text.secondary', fontSize: 14 }}>
+                    <span>
+                      AI is typing
+                      <span className="typing-dots">...</span>
+                    </span>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <input
+                ref={chatInputRef}
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSendChat(); }}
+                placeholder="Type your question..."
+                style={{ flex: 1, padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                disabled={chatLoading}
+                autoFocus
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                endIcon={<SendIcon />}
+                onClick={handleSendChat}
+                disabled={chatLoading || !chatInput.trim()}
+                aria-label="Send"
+                tabIndex={0}
+              >
+                Send
+              </Button>
+            </Box>
           </Box>
         )}
         {/* Past Recommendations History */}
