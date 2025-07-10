@@ -1,8 +1,8 @@
 import sys
 from src.logger import logging
-from typing import Optional, Type
+from typing import Any
 
-def error_message_detail(error: Exception, error_detail: sys) -> str:
+def error_message_detail(error: Exception, error_detail: Any) -> str:
     """
     Constructs a detailed error message including file name and line number.
     
@@ -29,12 +29,12 @@ def error_message_detail(error: Exception, error_detail: sys) -> str:
 class CustomException(Exception):
     """Custom exception class with detailed error reporting."""
     
-    def __init__(self, error_message: str, error_detail: sys):
+    def __init__(self, error_message: Exception, error_detail: Any):
         """
         Initialize custom exception with detailed context.
         
         Args:
-            error_message: Description of the error
+            error_message: The exception object
             error_detail: sys module reference for traceback
         """
         self.error_message = error_message_detail(error_message, error_detail)
@@ -47,7 +47,7 @@ class CustomException(Exception):
         return self.error_message
 
     @classmethod
-    def from_exception(cls, exc: Exception, error_detail: sys) -> 'CustomException':
+    def from_exception(cls, exc: Exception, error_detail: Any):
         """
         Alternative constructor that takes an existing exception.
         
@@ -58,4 +58,4 @@ class CustomException(Exception):
         Returns:
             New CustomException instance
         """
-        return cls(str(exc), error_detail)
+        return cls(exc, error_detail)

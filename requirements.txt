@@ -1,9 +1,10 @@
-pandas
+fastapi
+uvicorn
+pydantic
 numpy
-seaborn
 scikit-learn
-matplotlib
-dill
 catboost
-flask
-#-e .
+dill
+pandas 
+matplotlib
+xgboost

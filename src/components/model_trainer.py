@@ -31,6 +31,25 @@ class ModelTrainer:
     def __init__(self):
         self.model_trainer_config = ModelTrainerConfig()
         
+    def save_trained_artifacts(self, best_model, feature_names, categorical_features=None, preprocessor_path=None):
+        """Save all model artifacts needed for prediction"""
+        import logging
+        try:
+            model_artifacts = {
+                'model': best_model,
+                'feature_names': feature_names,
+                'categorical_features': categorical_features or [],
+                'preprocessor_path': preprocessor_path
+            }
+            save_object(
+                file_path=self.model_trainer_config.trained_model_file_path,
+                obj=model_artifacts
+            )
+            logging.info("All model artifacts saved successfully")
+        except Exception as e:
+            logging.error(f"Error saving model artifacts: {str(e)}")
+            raise CustomException(str(e), error_detail=sys)
+        
     def initiate_model_trainer(self, train_array, test_array):
         logging.info("Model Trainer started")
         try:
@@ -178,11 +197,34 @@ class ModelTrainer:
             
             logging.info(f"Best model found: {best_model_name} with score: {best_model_score:.4f}")
             
-            save_object(
-                file_path=self.model_trainer_config.trained_model_file_path,
-                obj=best_model
+            # Get feature names from your training data (since X_train is a numpy array, use CSV header minus target)
+            feature_names = [
+                "gender",
+                "race/ethnicity",
+                "parental level of education",
+                "lunch",
+                "test preparation course",
+                "reading score",
+                "writing score"
+            ]
+            # Categorical features as used in data_transformation
+            categorical_features = [
+                "gender",
+                "race/ethnicity",
+                "parental level of education",
+                "lunch",
+                "test preparation course"
+            ]
+            # Save all artifacts (preprocessor path is fixed by DataTransformationConfig)
+            from src.components.data_transformation import DataTransformationConfig
+            preprocessor_path = DataTransformationConfig.preprocessor_obj_file_path
+            self.save_trained_artifacts(
+                best_model=best_model,
+                feature_names=feature_names,
+                categorical_features=categorical_features,
+                preprocessor_path=preprocessor_path
             )
-            logging.info("Best model saved successfully")
+            logging.info("Best model and artifacts saved successfully")
             
             predicted = best_model.predict(X_test)
             r2_square = r2_score(y_test, predicted)

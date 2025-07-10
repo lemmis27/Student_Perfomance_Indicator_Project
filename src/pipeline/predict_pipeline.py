@@ -1,64 +1,104 @@
-from email.header import Header
-import sys
+import os
+import pickle
+import numpy as np
 import pandas as pd
-from src.exception import CustomException
-from src.logger import logging
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 
-from src.utils import load_object
-
-class PredictPipeline:
+class StudentPerformancePredictor:
     def __init__(self):
-        pass
+        self.model = None
+        self.scaler = StandardScaler()
+        self.label_encoders = {}
+        self.feature_names = []
+        self.is_trained = False
     
-    def predict(self, features):
-        try:
-            model_path = "artifacts/model.pkl"
-            preprocessor_path = "artifacts/preprocessor.pkl"
-            
-            logging.info("Loading model and preprocessor")
-            model = load_object(file_path=model_path)
-            preprocessor = load_object(file_path=preprocessor_path)
-            
-            logging.info("Preprocessing features")
-            data_scaled = preprocessor.transform(features)
-            
-            logging.info("Making predictions")
-            predictions = model.predict(data_scaled)
-            
-            return predictions
-        
-        except Exception as e:
-            raise CustomException(e, sys)
-    
-class CustomData:
-    def __init__(self,
-        gender: str,
-        race_ethnicity: str,
-        parental_level_of_education: str,
-        lunch: str,
-        test_preparation_course: str,
-        writing_score: float,
-        reading_score: float):
+    def prepare_data(self, data_path=None):
+        """Prepare sample data for training (replace with actual dataset)"""
+        if data_path and os.path.exists(data_path):
+            df = pd.read_csv(data_path)
+        else:
+            # Generate sample data for demonstration
+            np.random.seed(42)
+            n_samples = 1000
+            df = pd.DataFrame({
+                'gender': np.random.choice(['male', 'female'], n_samples),
+                'race/ethnicity': np.random.choice(['group A', 'group B', 'group C', 'group D', 'group E'], n_samples),
+                'parental level of education': np.random.choice([
+                    'some high school', 'high school', 'some college', 
+                    'associate\'s degree', 'bachelor\'s degree', 'master\'s degree'
+                ], n_samples),
+                'lunch': np.random.choice(['free/reduced', 'standard'], n_samples),
+                'test preparation course': np.random.choice(['none', 'completed'], n_samples),
+                'math score': np.random.randint(0, 101, n_samples),
+                'reading score': np.random.randint(0, 101, n_samples),
+                'writing score': np.random.randint(0, 101, n_samples)
+            })
+        return df
 
-        self.gender = gender
-        self.race_ethnicity = race_ethnicity
-        self.parental_level_of_education = parental_level_of_education
-        self.lunch = lunch
-        self.test_preparation_course = test_preparation_course
-        self.writing_score = writing_score
-        self.reading_score = reading_score
-        
-    def get_data_as_dataframe(self):
-        try:
-            custom_data_input_dict = {
-                "gender": [self.gender],
-                "race/ethnicity": [self.race_ethnicity],
-                "parental level of education": [self.parental_level_of_education],
-                "lunch": [self.lunch],
-                "test preparation course": [self.test_preparation_course],
-                "writing score": [self.writing_score],
-                "reading score": [self.reading_score],
-            }
-            return pd.DataFrame(custom_data_input_dict, index=[0])
-        except Exception as e:
-            raise CustomException(e, sys)
+    def train_model(self, df):
+        """Train the prediction model"""
+        categorical_features = ['gender', 'race/ethnicity', 'parental level of education', 
+                              'lunch', 'test preparation course']
+        numerical_features = ['reading score', 'writing score']
+        for feature in categorical_features:
+            le = LabelEncoder()
+            df[feature + '_encoded'] = le.fit_transform(df[feature])
+            self.label_encoders[feature] = le
+        encoded_features = [f + '_encoded' for f in categorical_features]
+        self.feature_names = encoded_features + numerical_features
+        X = df[self.feature_names]
+        y = df['math score']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_test_scaled = self.scaler.transform(X_test)
+        self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+        self.model.fit(X_train_scaled, y_train)
+        train_score = self.model.score(X_train_scaled, y_train)
+        test_score = self.model.score(X_test_scaled, y_test)
+        self.is_trained = True
+        return train_score, test_score
+
+    def predict(self, student_data):
+        if not self.is_trained:
+            raise ValueError("Model not trained yet")
+        input_data = {}
+        categorical_features = ['gender', 'race/ethnicity', 'parental level of education', 
+                              'lunch', 'test preparation course']
+        for feature in categorical_features:
+            if feature in student_data:
+                try:
+                    encoded_value = self.label_encoders[feature].transform([student_data[feature]])[0]
+                    input_data[feature + '_encoded'] = encoded_value
+                except ValueError:
+                    input_data[feature + '_encoded'] = 0
+        input_data['reading score'] = student_data.get('reading_score', 0)
+        input_data['writing score'] = student_data.get('writing_score', 0)
+        feature_array = np.array([[input_data[feature] for feature in self.feature_names]])
+        feature_array_scaled = self.scaler.transform(feature_array)
+        prediction = self.model.predict(feature_array_scaled)[0]
+        return max(0, min(100, round(prediction)))
+
+    def get_feature_importance(self):
+        if not self.is_trained:
+            return None
+        importance = self.model.feature_importances_
+        return dict(zip(self.feature_names, importance))
+
+    def save(self, model_path, scaler_path, encoders_path):
+        with open(model_path, 'wb') as f:
+            pickle.dump(self.model, f)
+        with open(scaler_path, 'wb') as f:
+            pickle.dump(self.scaler, f)
+        with open(encoders_path, 'wb') as f:
+            pickle.dump(self.label_encoders, f)
+
+    def load(self, model_path, scaler_path, encoders_path):
+        with open(model_path, 'rb') as f:
+            self.model = pickle.load(f)
+        with open(scaler_path, 'rb') as f:
+            self.scaler = pickle.load(f)
+        with open(encoders_path, 'rb') as f:
+            self.label_encoders = pickle.load(f)
+        self.is_trained = True
