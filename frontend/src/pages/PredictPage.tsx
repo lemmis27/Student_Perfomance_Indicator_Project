@@ -209,10 +209,12 @@ const PredictPage = ({ onPredict }: PredictPageProps) => {
       setShowConfetti(true);
       if (onPredict) {
         onPredict(data.prediction, form);
+        setTimeout(() => {
+          navigate('/recommend', { state: { score: data.prediction } });
+        }, 1200); // short delay to show confetti/snackbar
+      } else {
+        navigate('/recommend', { state: { score: data.prediction } });
       }
-      setTimeout(() => {
-        navigate('/recommend');
-      }, 1200); // short delay to show confetti/snackbar
     } catch (err: any) {
       setSnackbar({ open: true, message: err.message || "Prediction failed. Please try again.", severity: "error" });
     }

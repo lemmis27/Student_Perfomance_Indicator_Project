@@ -35,7 +35,10 @@ const getDesignTokens = (mode: "light" | "dark") => ({
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem("isLoggedIn") === "true");
   const [users, setUsers] = useState<{ [username: string]: string }>({});
-  const [lastPrediction, setLastPrediction] = useState<number | null>(null);
+  const [lastPrediction, setLastPrediction] = useState<number | null>(() => {
+    const stored = localStorage.getItem("lastPrediction");
+    return stored ? Number(stored) : null;
+  });
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("currentUser") || "");
   const [history, setHistory] = useState<any[]>(() => {
     const stored = localStorage.getItem("history");
@@ -74,6 +77,7 @@ function App() {
   // Update history when a prediction is made
   const handlePredict = (result: number, input: any) => {
     setLastPrediction(result);
+    localStorage.setItem("lastPrediction", String(result));
     setHistory((prev) => [
       ...prev,
       {
@@ -105,7 +109,7 @@ function App() {
             path="/recommend"
             element={
               <ProtectedRoute isLoggedIn={isLoggedIn}>
-                <RecommendationPage score={lastPrediction} history={history} />
+                <RecommendationPage history={history} />
               </ProtectedRoute>
             }
           />

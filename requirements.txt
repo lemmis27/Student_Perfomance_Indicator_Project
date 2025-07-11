@@ -8,3 +8,5 @@ dill
 pandas 
 matplotlib
 xgboost
+cohere
+python-dotenv
